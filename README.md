@@ -1,1 +1,0 @@
-# mortality_map

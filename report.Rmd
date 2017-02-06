@@ -1,0 +1,58 @@
+---
+title: "Mortality maps"
+subtitle: "AFEPI"
+author: "Joe Brew and Faustino Vilanculo"
+date: "`r Sys.Date()`"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+bibliography: skeleton.bib
+link-citations: yes
+---
+
+```{r setup, include=FALSE}
+library(tufte)
+library(cism)
+library(tidyverse)
+library(rgdal)
+library(sp)
+library(maptools)
+library(readxl)
+library(tidyr)
+
+knitr::opts_chunk$set(tidy = FALSE, 
+                      cache.extra = packageVersion('tufte'),
+                      comment = NA, 
+                      echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE, 
+                      error = TRUE, 
+                      cache = FALSE)
+options(htmltools.dir.version = FALSE)
+
+# Source data preparation
+source('prepare_data.R')
+```
+
+# Introduction
+
+This document contains geographic visualizations and tables pertaining to the AFEPI study, as well as the demographic data collected and managed by the Centro de Investigação em Saude de Manhiça. The data required to produce the outputs in this document are available upon request to authorized collaborators.^[To request data, email joebrew@gmail.com] The code for this report is freely available online.^[https://github.com/joebrew/mortality_maps]
+
+## Methods
+
+We combined AFEPI study data^[emailed by Denise Naniche on February 6, 2017] with CISM demographic location data^[emailed Aura Hunguana on February 1, 2017] with CISM spatial files^[provided by Faustino Vilanculo], with demographic mortality data.^[emailed by Charfudin Sacoor on February 3, 2017]
+
+```{r}
+plot(zonas)
+```
+
+
+```{r bib, include=FALSE}
+# create a bib file for the R packages used in this document
+knitr::write_bib(c('base', 'rmarkdown'), file = 'skeleton.bib')
+```
