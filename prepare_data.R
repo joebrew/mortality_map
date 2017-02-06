@@ -5,6 +5,8 @@ library(sp)
 library(maptools)
 library(readxl)
 library(tidyr)
+library(leaflet)
+library(RColorBrewer)
 
 # Define a connection object
 co <- credentials_connect(credentials_extract())
@@ -12,6 +14,10 @@ co <- credentials_connect(credentials_extract())
 # # Get census data
 # individual <- get_data('SELECT * FROM individual',
 #                    dbname = 'openhds')
+
+# Get some spatial data for manhica
+moz3 <- moz3
+man <- moz3[moz3@data$NAME_2 == 'Manhiça',]
 
 # Get locations data (sent by Aura via email)
 coordenadas <- read_csv('spatial/Coordenadas.csv')
@@ -44,6 +50,14 @@ bairros@data$zone_number <- substr(bairros@data$Zona, 1, 2)
 
 # Dissolve by zone_number
 zonas <- maptools::unionSpatialPolygons(bairros, IDs = bairros@data$zone_number)
+
+# Make a dataframe
+zonas_df <- data.frame(zone_number = sapply(slot(zonas, "polygons"), function(i) slot(i, "ID"))
+ )
+row.names(zonas_df) <- as.character(zonas_df$zone_number)
+zonas_df$zone_number <- as.numeric(as.character(zonas_df$zone_number))
+zonas <- SpatialPolygonsDataFrame(zonas,
+                                zonas_df)
 
 # Get locations for afepi participants
 afepi <-
@@ -135,3 +149,77 @@ for (i in 1:length(years)){
   out[[i]] <- read_mortality(year = years[i])
 }
 mortality <- bind_rows(out)
+
+# Define function for joining mortality to zonas shp
+join_data <- function(year = 2010,
+                      age_group = 'age_15_17'){
+  the_year <- year
+  the_age_group <- age_group
+  sub_mortality <- mortality %>%
+    filter(year == the_year,
+           age_group == the_age_group)
+  spatial_data <- zonas
+  spatial_data@data <-
+    left_join(x = spatial_data@data,
+              y= sub_mortality,
+              by = 'zone_number')
+  return(spatial_data)
+}
+
+# Define function for plotting joined data
+plot_joined_data <- function(joined_object){
+  
+  out_df <- joined_object
+  
+  out <- tidy(out_df, id = out@data$zone_number)
+  out$id_numeric <- as.numeric(as.character(out$id))
+  out <- left_join(x = out,
+                   y = out_df@data %>%
+                     mutate(id_numeric = zone_number),
+                   by = 'id_numeric')
+  palette <- brewer.pal(n = 9, 'Oranges')
+  g <- ggplot(data = out,
+         aes(x = long,
+             y = lat,
+             group = group)) +
+    geom_polygon(aes(fill = p_deaths)) +
+    coord_map() +
+    scale_fill_gradient2(name = 'Mortality\nrate',
+                         low=palette[1],mid=palette[5],high=palette[9]) +
+    theme_cism() +
+    labs(x = 'Longitude',
+         y = 'Latitude')
+  return(g)
+}
+
+# Define function for plotting via leaflet
+plot_joined_data_leaflet <- function(joined_object){
+  
+  # Define a palette
+  palette <- colorNumeric("Oranges", NULL, n = 4)
+  
+  # Define a popup
+  popup <- paste0("<strong>Zone number: </strong>", 
+                        joined_object@data$zone_number, 
+                        "<br><strong>Mortality rate: </strong>", 
+                        joined_object@data$p_deaths,
+                  "<br><strong>Number of deaths: </strong>", 
+                  joined_object@data$n_deaths)
+
+  leaflet(data = joined_object) %>%
+    addProviderTiles("CartoDB.Positron") %>%
+    addPolygons(fillColor = ~palette(joined_object@data$p_deaths),  ## we want the polygon filled with 
+              ## one of the palette-colors
+              ## according to the value in student1$Anteil
+              fillOpacity = 0.8,         ## how transparent do you want the polygon to be?
+              color = "darkgrey",       ## color of borders between districts
+              weight = 1.5,            ## width of borders
+              popup = popup) %>%
+    addLegend("bottomright", 
+              pal = palette, 
+              values = ~joined_object@data$p_deaths,
+              title = "Mortality rate",
+              opacity = 0.8)
+}
+
+# Define function for getting hiv data

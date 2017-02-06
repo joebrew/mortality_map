@@ -16,14 +16,28 @@ link-citations: yes
 ---
 
 ```{r setup, include=FALSE}
-library(tufte)
-library(cism)
-library(tidyverse)
-library(rgdal)
-library(sp)
-library(maptools)
-library(readxl)
-library(tidyr)
+packages <- c('tufte',
+              'cism',
+              'tidyverse',
+              'rgdal',
+              'sp',
+              'maptools',
+              'readxl',
+              'tidyr',
+              'knitr',
+              'base', 
+              'rmarkdown',
+              'broom',
+              'leaflet',
+              'RColorBrewer')
+packages <- sort(packages)
+for (i in 1:length(packages)){
+  eval(parse(text = 
+               paste0('library(',
+                      packages[i],
+                      ')')))
+}
+
 
 knitr::opts_chunk$set(tidy = FALSE, 
                       cache.extra = packageVersion('tufte'),
@@ -41,18 +55,70 @@ source('prepare_data.R')
 
 # Introduction
 
-This document contains geographic visualizations and tables pertaining to the AFEPI study, as well as the demographic data collected and managed by the Centro de Investigação em Saude de Manhiça. The data required to produce the outputs in this document are available upon request to authorized collaborators.^[To request data, email joebrew@gmail.com] The code for this report is freely available online.^[https://github.com/joebrew/mortality_maps]
+This document contains geographic visualizations and tables pertaining to the AFEPI study, as well as the demographic data collected and managed by the Centro de Investigação em Saude de Manhiça. The data required to produce the outputs in this document are available upon request to authorized collaborators.^[To request data, email joebrew@gmail.com] The code for this report is freely available online.^[https://github.com/joebrew/mortality_map]
 
 ## Methods
 
-We combined AFEPI study data^[emailed by Denise Naniche on February 6, 2017] with CISM demographic location data^[emailed Aura Hunguana on February 1, 2017] with CISM spatial files^[provided by Faustino Vilanculo], with demographic mortality data.^[emailed by Charfudin Sacoor on February 3, 2017]
+We combined AFEPI study data,^[emailed by Denise Naniche on February 6, 2017] with CISM demographic location data,^[emailed Aura Hunguana on February 1, 2017] with CISM spatial files^[provided by Faustino Vilanculo], with demographic mortality data.^[emailed by Charfudin Sacoor on February 3, 2017] After some fairly straightforward cleaning and merging,^[https://github.com/joebrew/mortality_map/blob/master/prepare_data.R] we produced visualizations using open-source spatial and statistical packages in the R language[@R-tufte]. 
+
+# Results
+
+## Mortality of 18-50 year olds
+
+### 2010
 
 ```{r}
-plot(zonas)
+x <- join_data(year = 2010,
+                 age_group = 'age_18_50')
+plot_joined_data(x)
 ```
 
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+### 2012
+
+```{r}
+x <- join_data(year = 2012,
+                 age_group = 'age_18_50')
+plot_joined_data(x)
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+## HIV prevalence according to AFEPI 2010/2012 survey overlayed on mortality of 18-50 year olds of the corresponding year.
+
+
+
+
+# Packages used
 
 ```{r bib, include=FALSE}
 # create a bib file for the R packages used in this document
-knitr::write_bib(c('base', 'rmarkdown'), file = 'skeleton.bib')
+knitr::write_bib(packages, file = 'skeleton.bib')
+```
+
+```{r}
+citation_text <- c()
+  for (i in 1:length(packages)){
+    citation_text[i] <- 
+    paste0('[@R-',
+               packages[i],
+               ']')
+}
+```
+
+```{r, results='asis'}
+for (i in 1:length(citation_text)){
+  cat(citation_text[i])
+  cat('\n\n***\n\n')
+}
+
 ```
