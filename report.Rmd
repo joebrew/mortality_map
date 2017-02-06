@@ -70,7 +70,9 @@ We combined AFEPI study data,^[emailed by Denise Naniche on February 6, 2017] wi
 ```{r}
 x <- join_data(year = 2010,
                  age_group = 'age_18_50')
-plot_joined_data(x)
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2010, ages 18-50')
 ```
 
 The below is an interactive (zoomable and clickable) version of the same map.
@@ -78,13 +80,22 @@ The below is an interactive (zoomable and clickable) version of the same map.
 ```{r}
 plot_joined_data_leaflet(x)
 ```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
 
 ### 2012
 
 ```{r}
 x <- join_data(year = 2012,
                  age_group = 'age_18_50')
-plot_joined_data(x)
+plot_joined_data(x) +
+    labs(title = 'Mortality rate by zone',
+       subtitle = '2012, ages 18-50')
 ```
 
 The below is an interactive (zoomable and clickable) version of the same map.
@@ -93,10 +104,212 @@ The below is an interactive (zoomable and clickable) version of the same map.
 plot_joined_data_leaflet(x)
 ```
 
-## HIV prevalence according to AFEPI 2010/2012 survey overlayed on mortality of 18-50 year olds of the corresponding year.
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
 
 
+### 2014
 
+```{r}
+x <- join_data(year = 2014,
+                 age_group = 'age_18_50')
+plot_joined_data(x) +
+    labs(title = 'Mortality rate by zone',
+       subtitle = '2014, ages 18-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+
+## HIV rate among 18-50 year olds
+
+In the below maps, HIV rate refers to the percentage of positives among all tested. It _only includes the AFEPI study_.
+
+### 2010
+
+```{r}
+x <- join_data_hiv(year = 2010,
+                 condition = 'Age >= 18 & Age <=50')
+plot_joined_data(x,
+                 fill_var = x@data$hiv_rate,
+                 legend_title = 'HIV\nrate') +
+  labs(title = 'HIV rate by zone',
+       subtitle = '2010, ages 18-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(joined_object = x,
+                                     fill_var = x@data$hiv_rate,
+                                     popup_text1 = 'HIV rate',
+                                     popup_var1 = x@data$hiv_rate,
+                                     popup_text2 = 'Number of positives',
+                                     popup_var2 = x@data$positives,
+                         legend_title = 'HIV rate')
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+### 2012
+
+```{r}
+x <- join_data_hiv(year = 2012,
+                 condition = 'Age >= 18 & Age <=50')
+plot_joined_data(x,
+                 fill_var = x@data$hiv_rate,
+                 legend_title = 'HIV\nrate') +
+  labs(title = 'HIV rate by zone',
+       subtitle = '2012, ages 18-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(joined_object = x,
+                                     fill_var = x@data$hiv_rate,
+                                     popup_text1 = 'HIV rate',
+                                     popup_var1 = x@data$hiv_rate,
+                                     popup_text2 = 'Number of positives',
+                                     popup_var2 = x@data$positives,
+                         legend_title = 'HIV rate')
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+# Overlays
+
+
+The below map shows the 2012 mortality rate at the zone level, with an overlay of all AFEPI participants (for whom geographic data were available), colored by test result.
+
+```{r}
+x <- join_data(year = 2012,
+                 age_group = 'age_18_50')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2010, ages 18-50') +
+  geom_point(data = afepi %>%
+               filter(Resulttest != 'Indeterminado'),
+             aes(x = lng,
+                 y = lat,
+                 group = NA,
+                 color = Resulttest),
+             alpha = 0.5,
+             size = 0.5) +
+  scale_color_manual(name = '',
+                     values = c('darkgreen', 'darkred'))
+```
+
+The below map is identical, but interactive.
+
+```{r}
+x <- join_data(year = 2012,
+                 age_group = 'age_18_50')
+z <- afepi %>%
+               filter(Resulttest != 'Indeterminado') %>%
+                 mutate(color = ifelse(Resulttest == 'Positivo', 'darkgreen', 'darkred'))
+popup <- paste0("<strong>Study ID: </strong>", 
+                  z$StudyID, 
+                  "<br><strong>",
+                  'Age',
+                  ": </strong>", 
+                  z$Age,
+                  "<br><strong>",
+                  'Sex',
+                  ": </strong>",
+                  z$Sex)
+plot_joined_data_leaflet(x) %>%
+  addCircleMarkers(data = z,
+               lng = ~lng,
+               lat = ~lat,
+               fillColor = ~color,
+               color = NA,
+               opacity = 0,
+               radius = 3,
+               popup = popup)
+```
+
+## Age distribution
+
+### AFEPI participants
+
+```{r}
+cism_plot(x = afepi$Age) +
+  labs(x = 'Years',
+       title = 'Age distribution of AFEPI partipants')
+```
+
+### AFEPI participants by outcome
+
+```{r}
+ggplot(data = afepi %>%
+         filter(Resulttest != 'Indeterminado'),
+       aes(x = Age,
+           group = Resulttest,
+           fill = Resulttest)) +
+  geom_density(alpha = 0.6) +
+  scale_fill_manual(name = 'Test result',
+                    values = c('darkorange', 'darkgreen')) +
+  theme_cism() +
+  labs(title = 'Age distribution of AFEPI participants',
+       subtitle = 'By result status')
+```
+
+### Residents of study area
+
+```{r}
+ggplot(data = individual %>%
+         mutate(age = as.numeric(Sys.Date() - as.Date(dob)) / 365.25) %>%
+         filter(age <= 110),
+       aes(x = age)) +
+  geom_density(alpha = 0.6,
+               fill = 'darkorange') +
+  labs(x = 'Age',
+       y = 'Density',
+       title = 'Age distribution of Manhiça residents',
+       subtitle = 'Per the census') +
+  theme_cism()
+```
+
+## Sex distribution
+
+### AFEPI participants
+
+```{r}
+cism_plot(afepi$Sex) +
+  labs(title = 'Sex distribution of AFEPI participants')
+```
+
+### Residents of study area
+
+
+```{r}
+x <- individual$gender
+x <- x[x %in% c('M', 'F')]
+cism_plot(x) +
+  labs(title = 'Sex distribution of study area')
+```
 
 # Packages used
 
@@ -117,8 +330,9 @@ citation_text <- c()
 
 ```{r, results='asis'}
 for (i in 1:length(citation_text)){
+    cat('\n\n***\n\n~~\n\n')
   cat(citation_text[i])
-  cat('\n\n***\n\n')
+  cat('\n\n***\n\n<br><br>')
 }
 
 ```
