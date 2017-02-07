@@ -1,7 +1,7 @@
 ---
 title: "Mortality maps"
 subtitle: "AFEPI"
-author: "Joe Brew and Faustino Vilanculo"
+author: "Joe Brew, Faustino Vilanculo, Charfudin Sacoor"
 date: "`r Sys.Date()`"
 output:
   tufte::tufte_html: default
@@ -210,7 +210,8 @@ plot_joined_data(x) +
   labs(title = 'Mortality rate by zone',
        subtitle = '2010, ages 18-50') +
   geom_point(data = afepi %>%
-               filter(Resulttest != 'Indeterminado'),
+               filter(Resulttest != 'Indeterminado',
+                      !zone_number %in% exclude_these),
              aes(x = lng,
                  y = lat,
                  group = NA,
@@ -227,7 +228,8 @@ The below map is identical, but interactive.
 x <- join_data(year = 2012,
                  age_group = 'age_18_50')
 z <- afepi %>%
-               filter(Resulttest != 'Indeterminado') %>%
+               filter(Resulttest != 'Indeterminado',
+                      !zone_number %in% exclude_these) %>%
                  mutate(color = ifelse(Resulttest == 'Positivo', 'darkgreen', 'darkred'))
 popup <- paste0("<strong>Study ID: </strong>", 
                   z$StudyID, 
@@ -236,9 +238,9 @@ popup <- paste0("<strong>Study ID: </strong>",
                   ": </strong>", 
                   z$Age,
                   "<br><strong>",
-                  'Sex',
+                  'Test result',
                   ": </strong>",
-                  z$Sex)
+                  z$Resulttest)
 plot_joined_data_leaflet(x) %>%
   addCircleMarkers(data = z,
                lng = ~lng,
@@ -279,7 +281,7 @@ ggplot(data = afepi %>%
 ### Residents of study area
 
 ```{r}
-ggplot(data = individual %>%
+ggplot(data = ii %>%
          mutate(age = as.numeric(Sys.Date() - as.Date(dob)) / 365.25) %>%
          filter(age <= 110),
        aes(x = age)) +
@@ -288,7 +290,7 @@ ggplot(data = individual %>%
   labs(x = 'Age',
        y = 'Density',
        title = 'Age distribution of Manhiça residents',
-       subtitle = 'Per the census') +
+       subtitle = 'Per the census, filtering to only study aged population') +
   theme_cism()
 ```
 
@@ -305,7 +307,7 @@ cism_plot(afepi$Sex) +
 
 
 ```{r}
-x <- individual$gender
+x <- ii$gender
 x <- x[x %in% c('M', 'F')]
 cism_plot(x) +
   labs(title = 'Sex distribution of study area')

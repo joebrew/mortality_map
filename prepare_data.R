@@ -28,6 +28,18 @@ if('census_data.RData' %in% dir('data')){
        file = 'data/census_data.RData')
 }
 
+# Correct variable names
+individual <- individual %>%
+  mutate(permid = lastName)
+
+# Remove those not in study area
+individual <- individual %>%
+  filter(!grepl('HH', permid),
+         permid != '9999-999-99') %>%
+  filter(!duplicated(permid),
+         !is.na(permid),
+         permid != '')
+
 # Create a time at risk dataset for the opd period
 if('cleaned_time_at_risk.RData' %in% dir('data')){
   load('data/cleaned_time_at_risk.RData')
@@ -143,8 +155,18 @@ zonas_df <- data.frame(zone_number = sapply(slot(zonas, "polygons"), function(i)
 )
 row.names(zonas_df) <- as.character(zonas_df$zone_number)
 zonas_df$zone_number <- as.numeric(as.character(zonas_df$zone_number))
+
+
 zonas <- SpatialPolygonsDataFrame(zonas,
                                   zonas_df)
+
+# Exclude some zones
+exclude_these <- c(28, 29, 31, 32)
+
+# Also exclude 34 and 33 since they're far
+exclude_these <- c(exclude_these, c(33, 34))
+
+zonas <- zonas[!zonas$zone_number %in% exclude_these,]
 
 # Get locations for afepi participants
 afepi <-
