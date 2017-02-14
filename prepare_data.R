@@ -8,105 +8,298 @@ library(tidyr)
 library(leaflet)
 library(RColorBrewer)
 
-# # Get census data
-# Load in census data
-if('census_data.RData' %in% dir('data')){
-  load('data/census_data.RData')
+# # # Get census data
+# # Load in census data
+# if('census_data.RData' %in% dir('data')){
+#   load('data/census_data.RData')
+# } else {
+#   residency <- cism::get_data(tab = 'residency',
+#                               dbname = 'openhds',
+#                               port = 3306)
+#   individual <- cism::get_data(tab = 'individual',
+#                                dbname = 'openhds',
+#                                port = 3306)
+#   location <- cism::get_data(tab = 'location',
+#                              dbname = 'openhds',
+#                              port = 3306)
+#   save(residency,
+#        individual,
+#        location,
+#        file = 'data/census_data.RData')
+# }
+# 
+# # Correct variable names
+# individual <- individual %>%
+#   mutate(permid = lastName)
+# 
+# # Remove those not in study area
+# individual <- individual %>%
+#   filter(!grepl('HH', permid),
+#          permid != '9999-999-99') %>%
+#   filter(!duplicated(permid),
+#          !is.na(permid),
+#          permid != '')
+# 
+# # Create a time at risk dataset for the opd period
+# if('cleaned_time_at_risk.RData' %in% dir('data')){
+#   load('data/cleaned_time_at_risk.RData')
+# } else {
+#   
+#   # Create time at risk
+#   rr <- residency %>%
+#     filter(startDate >= '2010-01-01' &
+#              startDate <= '2012-12-31')
+#   ii <- individual %>%
+#     filter(dob <= '1994-01-01',
+#            dob >= '1963-01-01')
+#   tar <- cism::create_time_at_risk(residency = rr,
+#                                    individual = ii,
+#                                    location = location)
+#   
+#   # Keep only those who are in the non-expanded zone
+#   # (ie, bairro <= 3499) (need to confirm with charfudin)
+#   expansion <- read_excel('data/Bairros de area de Expansao_Demo.xls',
+#                           skip = 3)$Bairro
+#   tar$bairro <- as.numeric(as.character(substr(tar$locationName, 1, 4)))
+#   tar <- tar %>%
+#     filter(!bairro %in% expansion)
+#   
+#   # Get n at risk for June 1, 2010 and June 1, 2012
+#   etar <- 
+#     tar %>%
+#     mutate(at_risk_2010 = 
+#              startDate <= '2010-06-01' &
+#              endDate >= '2010-06-01',
+#            at_risk_2012 = 
+#              startDate <= '2012-06-01' &
+#              endDate >= '2012-06-01')
+#   
+#   # Since 2010 is not trustable, let's just use 2012
+#   etar <- etar %>%
+#     mutate(at_risk_2010 = at_risk_2012) %>%
+#     filter(at_risk_2010) %>%
+#     filter(!duplicated(individual_uuid))
+#   
+#   # Join to individuals
+#   ii <- ii %>%
+#     left_join(etar %>%
+#                 dplyr::select(at_risk_2010,
+#                               at_risk_2012,
+#                               individual_extId),
+#               by = c('extId' = 'individual_extId'))
+#   
+#   # Keep only those who were 18-50 at the time
+#   ii <- ii %>%
+#     filter(!is.na(dob)) %>%
+#     mutate(dob = as.Date(dob)) %>%
+#     mutate(age_in_2010 = as.numeric(as.Date('2010-06-01') - dob) / 365.25,
+#            age_in_2012 = as.numeric(as.Date('2012-06-01') - dob) / 365.25) %>%
+#     mutate(at_risk_2010 = 
+#              at_risk_2010 &
+#              age_in_2010 >= 18 &
+#              age_in_2010 <= 50,
+#            at_risk_2012 = 
+#              at_risk_2012 &
+#              age_in_2012 >= 18 &
+#              age_in_2012 <= 50)
+#   
+#   # Save a copy for faster later use
+#   save(ii,
+#        file = 'data/cleaned_time_at_risk.RData')
+# }
+
+credentials <- credentials_extract()
+credentials$dbname <- 'dss'
+co <- credentials_connect(credentials)
+
+# Get data for census
+if('dss_data.RData' %in% dir('data')){
+  load('data/dss_data.RData')
 } else {
-  residency <- cism::get_data(tab = 'residency',
-                              dbname = 'openhds',
-                              port = 3306)
-  individual <- cism::get_data(tab = 'individual',
-                               dbname = 'openhds',
-                               port = 3306)
-  location <- cism::get_data(tab = 'location',
-                             dbname = 'openhds',
-                             port = 3306)
-  save(residency,
-       individual,
-       location,
-       file = 'data/census_data.RData')
+  tables <- c('av_adult',
+              'household',
+              'household_details',
+              'member',
+              'member_details',
+              'migration_history')
+  for (i in 1:length(tables)){
+    x <- get_data(tab = tables[i],
+                  connection_object = co)
+    assign(tables[i],
+           x)
+    rm(x)
+    save(av_adult,
+         household,
+         household_details,
+         member,
+         member_details,
+         migration_history,
+         file = 'data/dss_data.RData')
+    
+}
 }
 
-# Correct variable names
-individual <- individual %>%
-  mutate(permid = lastName)
 
-# Remove those not in study area
-individual <- individual %>%
-  filter(!grepl('HH', permid),
-         permid != '9999-999-99') %>%
-  filter(!duplicated(permid),
-         !is.na(permid),
-         permid != '')
+# # Read in coordinates from Aura
+# ccords <- read_csv('spatial/Coordenadas.csv')
 
-# Create a time at risk dataset for the opd period
-if('cleaned_time_at_risk.RData' %in% dir('data')){
-  load('data/cleaned_time_at_risk.RData')
-} else {
-  
-  # Create time at risk
-  rr <- residency %>%
-    filter(startDate >= '2010-01-01' &
-             startDate <= '2012-12-31')
-  ii <- individual %>%
-    filter(dob <= '1994-01-01',
-           dob >= '1963-01-01')
-  tar <- cism::create_time_at_risk(residency = rr,
-                                   individual = ii,
-                                   location = location)
-  
-  # Keep only those who are in the non-expanded zone
-  # (ie, bairro <= 3499) (need to confirm with charfudin)
-  expansion <- read_excel('data/Bairros de area de Expansao_Demo.xls',
-                          skip = 3)$Bairro
-  tar$bairro <- as.numeric(as.character(substr(tar$locationName, 1, 4)))
-  tar <- tar %>%
-    filter(!bairro %in% expansion)
-  
-  # Get n at risk for June 1, 2010 and June 1, 2012
-  etar <- 
-    tar %>%
-    mutate(at_risk_2010 = 
-             startDate <= '2010-06-01' &
-             endDate >= '2010-06-01',
-           at_risk_2012 = 
-             startDate <= '2012-06-01' &
-             endDate >= '2012-06-01')
-  
-  # Since 2010 is not trustable, let's just use 2012
-  etar <- etar %>%
-    mutate(at_risk_2010 = at_risk_2012) %>%
-    filter(at_risk_2010) %>%
-    filter(!duplicated(individual_uuid))
-  
-  # Join to individuals
-  ii <- ii %>%
-    left_join(etar %>%
-                dplyr::select(at_risk_2010,
-                              at_risk_2012,
-                              individual_extId),
-              by = c('extId' = 'individual_extId'))
-  
-  # Keep only those who were 18-50 at the time
-  ii <- ii %>%
-    filter(!is.na(dob)) %>%
-    mutate(dob = as.Date(dob)) %>%
-    mutate(age_in_2010 = as.numeric(as.Date('2010-06-01') - dob) / 365.25,
-           age_in_2012 = as.numeric(as.Date('2012-06-01') - dob) / 365.25) %>%
-    mutate(at_risk_2010 = 
-             at_risk_2010 &
-             age_in_2010 >= 18 &
-             age_in_2010 <= 50,
-           at_risk_2012 = 
-             at_risk_2012 &
-             age_in_2012 >= 18 &
-             age_in_2012 <= 50)
-  
-  # Save a copy for faster later use
-  save(ii,
-       file = 'data/cleaned_time_at_risk.RData')
+# Clean up member
+member <- member %>%
+  filter(!perm_id %in% c('9999-999-99'),
+         !is.na(perm_id)) %>%
+  filter(!duplicated(perm_id)) %>%
+  filter(!grepl('h', tolower(perm_id)))
+member$dob <- as.Date(substr(member$dob, 1, 10))
+member$start_date <- as.Date(member$start_date)
+member$end_date <- as.Date(member$end_date, format = '%Y-%m-%d')
+# Get zone
+member$zone_number <- as.numeric(substr(member$house_number, 1, 2))
+
+# Get a death date
+member$death_date <-
+  ifelse(member$end_type == 'DTH',
+         as.character(member$end_date),
+         NA)
+member$death_date <- as.Date(member$death_date)
+member$death_year <- as.numeric(format(member$death_date, '%Y'))
+
+# Create a multi-year copy of member
+years <- 2010:2016
+for (i in 1:length(years)){
+  x <- member %>%
+    mutate(year = years[i])
+  if(i == 1){
+    member_expanded <- x
+  } else {
+    member_expanded <- bind_rows(member_expanded,
+                                 x)
+  }
 }
+
+# Clean out from member_expanded those who hadn't yet entered or already exited
+member_expanded <-
+  member_expanded %>%
+  filter(start_date <= 
+           as.Date(paste0(year, '-01-01')),
+         is.na(end_date) | 
+           end_date >= 
+           as.Date(paste0(year, '-01-01')))
+
+# Get a boolean died this year or not
+member_expanded$died_this_year <-
+  member_expanded$death_year == member_expanded$year
+
+# Get age
+member_expanded <-
+  member_expanded %>%
+  mutate(years_of_age = 
+           as.numeric(as.Date(paste0(year, '-01-01')) -
+                        dob) / 365.25) %>%
+  filter(years_of_age >= 0) %>%
+  filter(years_of_age <= 120)
+
+
+# Get a death rate by age group
+member_expanded <-
+  member_expanded %>%
+  mutate(age_group = 
+           ifelse(age >= 18 & age <= 27, '18-27',
+                  ifelse(age > 27 &
+                           age <= 37, '28-37',
+                         ifelse(age > 37 & age <= 47,
+                                '38-47',
+                                ifelse(age > 47 &
+                                         age <=50,
+                                       '48-50',
+                                       NA)))))
+
+
+# Get death rate by age group
+age_specific_death_rate <-
+  member_expanded %>%
+  group_by(age_group) %>%
+  summarise(expected_death_rate = length(which(died_this_year)) / n(),
+            n = n()) %>%
+  mutate(p = n / sum(n)) %>%
+  dplyr::select(-n)
+
+# Get population and deaths per zone per year
+pop <-
+  member_expanded %>%
+  filter(years_of_age >= 18,
+         years_of_age <= 50) %>%
+  group_by(zone_number,
+           year) %>%
+  summarise(pop = n(),
+            deaths = length(which(died_this_year)))
+
+# Get all pop too
+all_pop <-
+  member_expanded %>%
+  group_by(zone_number,
+           year) %>%
+  summarise(all_pop = n(),
+            all_deaths = length(which(died_this_year)))
+
+# Get by age too
+pop_age <-
+  member_expanded %>%
+  filter(years_of_age >= 18,
+         years_of_age <= 50) %>%
+  group_by(zone_number,
+           year,
+           age_group) %>%
+  summarise(pop = n(),
+            deaths = length(which(died_this_year))) %>%
+  left_join(age_specific_death_rate) %>%
+  mutate(real_death_rate = deaths / pop) %>%
+  filter(!is.na(age_group)) %>%
+  group_by(zone_number,
+           year) %>%
+  mutate(fake_pop = sum(pop) * p) %>%
+  ungroup %>%
+  mutate(fake_deaths = real_death_rate * fake_pop) %>%
+  group_by(zone_number,
+           year) %>%
+  summarise(adjusted_death_rate = sum(fake_deaths) / sum(pop))
+
+# Join to pop
+pop <- left_join(pop, pop_age)
+pop$death_rate <- pop$deaths / pop$pop
+
+# Create an object called "mortality"
+mortality <-
+  member_expanded %>%
+  filter(years_of_age >= 18,
+         years_of_age <= 50) %>%
+  group_by(zone_number,
+           year,
+           age_group) %>%
+  summarise(pop = n(),
+            deaths = length(which(died_this_year))) %>%
+  # left_join(age_specific_death_rate) %>%
+  mutate(real_death_rate = deaths / pop) %>%
+  rename(n_deaths = deaths) %>%
+         mutate(p_deaths = n_deaths / pop) %>%
+  filter(!is.na(age_group))
+  
+# create a frow for agg
+mort_two <-
+  member_expanded %>%
+  filter(years_of_age >= 18,
+         years_of_age <= 50) %>%
+  group_by(zone_number,
+           year) %>%
+  summarise(pop = n(),
+            deaths = length(which(died_this_year))) %>%
+  mutate(real_death_rate = deaths / pop) %>%
+  rename(n_deaths = deaths) %>%
+  mutate(p_deaths = n_deaths / pop) %>%
+  mutate(age_group = '18-50')
+mortality <-
+  bind_rows(mortality,
+            mort_two)
+
 
 # Get some spatial data for manhica
 moz3 <- moz3
@@ -160,13 +353,13 @@ zonas_df$zone_number <- as.numeric(as.character(zonas_df$zone_number))
 zonas <- SpatialPolygonsDataFrame(zonas,
                                   zonas_df)
 
-# Exclude some zones
-exclude_these <- c(28, 29, 31, 32)
-
-# Also exclude 34 and 33 since they're far
-exclude_these <- c(exclude_these, c(33, 34))
-
-zonas <- zonas[!zonas$zone_number %in% exclude_these,]
+# # Exclude some zones
+# exclude_these <- c(28, 29, 31, 32)
+# 
+# # Also exclude 34 and 33 since they're far
+# exclude_these <- c(exclude_these, c(33, 34))
+# 
+# zonas <- zonas[!zonas$zone_number %in% exclude_these,]
 
 # Get locations for afepi participants
 afepi <-
@@ -252,12 +445,12 @@ read_mortality <- function(year){
   return(this_year)
 }
 
-years <- 2010:2016
-out <- list()
-for (i in 1:length(years)){
-  out[[i]] <- read_mortality(year = years[i])
-}
-mortality <- bind_rows(out)
+# years <- 2010:2016
+# out <- list()
+# for (i in 1:length(years)){
+#   out[[i]] <- read_mortality(year = years[i])
+# }
+# mortality <- bind_rows(out)
 
 # FUNCTIONS
 
@@ -353,17 +546,19 @@ make_pretty <-
 
 # Define function for joining mortality to zonas shp
 join_data <- function(year = 2010,
-                      age_group = 'age_15_17'){
+                      age_group = '18-50'){
   the_year <- year
   the_age_group <- age_group
   sub_mortality <- mortality %>%
-    filter(year == the_year,
-           age_group == the_age_group)
+    filter(year == the_year)
+  sub_mortality <- sub_mortality %>%
+    filter(age_group == the_age_group)
   spatial_data <- zonas
   spatial_data@data <-
     left_join(x = spatial_data@data,
               y= sub_mortality,
-              by = 'zone_number')
+              by = 'zone_number') %>%
+    dplyr::select(-real_death_rate)
   return(spatial_data)
 }
 
@@ -481,4 +676,98 @@ join_data_hiv <- function(year = 2010,
               y= sub_afepi,
               by = 'zone_number')
   return(spatial_data)
+}
+
+
+# Define function for hotspots
+hotspot <- function(joined_object = x,
+                    cases,
+                    population){
+  
+  # require(rsatscan)
+  # invisible(ss.options(reset=TRUE))
+  
+  # # Join to hiv too
+  # hiv <- afepi %>% 
+  #   filter(test_year == joined_object@data$year[1]) %>%
+  #   group_by(zone_number) %>%
+  #   summarise(n_positive = length(which(Resulttest == 'Positivo')),
+  #             n = n())
+  # joined_object@data <-
+  #   left_join(joined_object@data,
+  #             y = hiv)
+  
+  require(SpatialEpi)
+  
+  # Create centroids
+  centroids <- as.matrix(coordinates(zonas))
+  # centroids <- centroids[!is.na(population)]
+  # cases <- cases[!is.na(population)]
+  # zonas <- zonas[!is.na(population),]
+  # population <- population[!is.na(population)]
+  
+  # Define cases
+  cases[is.na(cases)] <- mean(cases, na.rm = TRUE)
+  population[is.na(population)] <- mean(population, na.rm = TRUE)
+  
+  n_strata <- nrow(zonas@data)
+  # expected_cases <- expected(population, cases, n_strata)
+  expected_cases <- sum(cases, na.rm = TRUE)
+  expected_cases <- expected_cases * (population / sum(population, na.rm = TRUE))
+  expected_cases[is.na(expected_cases)] <- mean(expected_cases, na.rm = TRUE)
+  
+  # Set paramaters
+  pop.upper.bound <- 0.5
+  n.simulations <- 999
+  alpha.level <- 0.05
+  plot <- FALSE
+  
+  
+  # Run satscan
+  # binomial <- kulldorff(geo = centroids,
+  #                 cases = cases,
+  #                 population = population,
+  #                 pop.upper.bound = pop.upper.bound,
+  #                 n.simulations = n.simulations,
+  #                 alpha.level = 0.05,
+  #                 plot = FALSE)
+  poisson <- kulldorff(geo = centroids,
+                        cases = cases,
+                        population = population,
+                        expected.cases = expected_cases,
+                        pop.upper.bound = pop.upper.bound,
+                        n.simulations = n.simulations,
+                        alpha.level = 0.05,
+                        plot = FALSE)
+  
+  # # Run bayes cluster
+  # out <- bayes_cluster(y = cases, 
+  #                      E = expected_cases, 
+  #                      population = population, 
+  #                      sp.obj = zonas, 
+  #                      centroids = centroids, 
+  #                      max.prop = 0.5, 
+  #                      shape = c(0,1), 
+  #                      rate = c(0,1), 
+  #                      J = 10, 
+  #                      pi0 = 0.95,
+  #               n.sim.lambda = 10^4, 
+  #               n.sim.prior = 10^5, 
+  #               n.sim.post = 10^5, 
+  #               burnin.prop = 0.1,
+  #               theta.init = vector(mode="numeric", length=0))
+  
+  # # Besag-newell
+  # out <- besag_newell(geo = centroids, 
+  #                     population, cases, 
+  #                     expected.cases= expected_cases, 
+  #                     k = sum(cases), 
+  #                     alpha.level = alpha.level)
+  
+  # get clusters
+  cluster <- poisson$most.likely.cluster$location.IDs.included
+  
+  # Plot
+  plot(zonas,axes=TRUE)
+  plot(zonas[cluster,],add=TRUE,col="red")
 }

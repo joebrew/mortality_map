@@ -53,6 +53,7 @@ options(htmltools.dir.version = FALSE)
 source('prepare_data.R')
 ```
 
+
 # Introduction
 
 This document contains geographic visualizations and tables pertaining to the AFEPI study, as well as the demographic data collected and managed by the Centro de Investigação em Saude de Manhiça. The data required to produce the outputs in this document are available upon request to authorized collaborators.^[To request data, email joebrew@gmail.com] The code for this report is freely available online.^[https://github.com/joebrew/mortality_map]
@@ -63,13 +64,49 @@ We combined AFEPI study data,^[emailed by Denise Naniche on February 6, 2017] wi
 
 # Results
 
+## Population
+
+The below table shows the population and number of deaths (18-50 year olds only) for each zone.
+
+```{r}
+make_pretty(pop %>% mutate(year = as.character(year)) %>% 
+              dplyr::select(zone_number,
+                            year, 
+                            pop))
+```
+
+## Deaths and death rate
+
+The below table is identical to the above, but also shows a true death rate and age standardized death rate [@Gonzlez2015].
+
+```{r}
+make_pretty(pop %>%
+              mutate(year = as.character(year)),
+            round_digits = 4)
+```
+
+The below plot shows the correlation between the real death rate and the age-standardized death rate, in which size is a function of a zone's population.
+
+```{r}
+ggplot(data = pop,
+       aes(x = death_rate,
+           y = adjusted_death_rate,
+           size = pop)) +
+  geom_point(alpha = 0.3) +
+  theme_cism() +
+  xlab('Death rate') +
+  ylab('Age-standardized death rate') +
+  ggtitle('Death rate vs. age-standardized death rate',
+          'One observation = one zone-year, 2010-2016')
+```
+
 ## Mortality of 18-50 year olds
 
 ### 2010
 
 ```{r}
 x <- join_data(year = 2010,
-                 age_group = 'age_18_50')
+                 age_group = '18-50')
 plot_joined_data(x) +
   labs(title = 'Mortality rate by zone',
        subtitle = '2010, ages 18-50')
@@ -92,7 +129,7 @@ make_pretty(x)
 
 ```{r}
 x <- join_data(year = 2012,
-                 age_group = 'age_18_50')
+                 age_group = '18-50')
 plot_joined_data(x) +
     labs(title = 'Mortality rate by zone',
        subtitle = '2012, ages 18-50')
@@ -115,7 +152,7 @@ make_pretty(x)
 
 ```{r}
 x <- join_data(year = 2014,
-                 age_group = 'age_18_50')
+                 age_group = '18-50')
 plot_joined_data(x) +
     labs(title = 'Mortality rate by zone',
        subtitle = '2014, ages 18-50')
@@ -205,13 +242,12 @@ The below map shows the 2012 mortality rate at the zone level, with an overlay o
 
 ```{r}
 x <- join_data(year = 2012,
-                 age_group = 'age_18_50')
+                 age_group = '18-50')
 plot_joined_data(x) +
   labs(title = 'Mortality rate by zone',
        subtitle = '2010, ages 18-50') +
   geom_point(data = afepi %>%
-               filter(Resulttest != 'Indeterminado',
-                      !zone_number %in% exclude_these),
+               filter(Resulttest != 'Indeterminado'),
              aes(x = lng,
                  y = lat,
                  group = NA,
@@ -226,10 +262,9 @@ The below map is identical, but interactive.
 
 ```{r}
 x <- join_data(year = 2012,
-                 age_group = 'age_18_50')
+                 age_group = '18-50')
 z <- afepi %>%
-               filter(Resulttest != 'Indeterminado',
-                      !zone_number %in% exclude_these) %>%
+               filter(Resulttest != 'Indeterminado') %>%
                  mutate(color = ifelse(Resulttest == 'Positivo', 'darkgreen', 'darkred'))
 popup <- paste0("<strong>Study ID: </strong>", 
                   z$StudyID, 
@@ -280,10 +315,13 @@ ggplot(data = afepi %>%
 
 ### Residents of study area
 
+(Used 2014)
+
 ```{r}
-ggplot(data = ii %>%
-         mutate(age = as.numeric(Sys.Date() - as.Date(dob)) / 365.25) %>%
-         filter(age <= 110),
+ggplot(data = member_expanded %>%
+         filter(year == 2014,
+                age >= 18,
+                age <= 50),
        aes(x = age)) +
   geom_density(alpha = 0.6,
                fill = 'darkorange') +
@@ -307,10 +345,131 @@ cism_plot(afepi$Sex) +
 
 
 ```{r}
-x <- ii$gender
+x <- member_expanded %>%
+         filter(year == 2014,
+                age >= 18,
+                age <= 50) %>%
+  .$gender
+  
 x <- x[x %in% c('M', 'F')]
 cism_plot(x) +
-  labs(title = 'Sex distribution of study area')
+  labs(title = 'Sex distribution of study area',
+       subtitle = 'Age group limited to 18-50, year 2014')
+```
+
+# Follow-up work
+
+## Hotspot maps
+
+The below maps use the Kulldorf spatial scan statistic method. The red area are the zone / those zones which are estimated to be the most likely cluster.
+
+### Death rate map, 2010
+
+```{r}
+x <- join_data(year = 2010,
+               age_group = '18-50')
+hotspot(x,
+  cases = x@data$n_deaths,
+  population = x@data$pop)
+```
+
+### Death rate map, 2012
+
+```{r}
+x <- join_data(year = 2012,
+               age_group = '18-50')
+hotspot(x,
+  cases = x@data$n_deaths,
+  population = x@data$pop)
+```
+
+
+### HIV map 2010
+
+```{r}
+x <- join_data_hiv(year = 2010,
+               condition = "Age >= 18 & Age <= 50")
+hotspot(x,
+  cases = x@data$positives,
+  population = x@data$denom)
+title('Most likely cluster (year: 2010, age group: 18-50)')
+```
+
+### HIV map 2012
+
+```{r}
+x <- join_data_hiv(year = 2012,
+               condition = "Age >= 18 & Age <= 50")
+hotspot(x,
+  cases = x@data$positives,
+  population = x@data$denom)
+title('Most likely cluster (year: 2012, age group: 18-50)')
+```
+
+## HIV participation map 
+
+I am not yet able to produce a map including location of people who did not want to participate in the study, as I do not have those data.
+
+# Map that shows study area with zone number labels
+
+(and an inset map showing Mozambique and Maputo province)
+
+```{r, fig.height = 8, fig.width = 8}
+library(cism)
+
+par(fig = c(0,1,0,1))
+
+plot(zonas,
+     main = 'Study area')
+text(as.matrix(coordinates(zonas)),
+     labels = zonas@data$zone_number,
+     col = adjustcolor('black', alpha.f = 0.5),
+     cex = 0.5)
+par(fig = c(0.01,0.4, 0.5, 1), new = T)  
+plot(moz1, col = ifelse(moz1@data$NAME_1 == 'Maputo', 'red', 'white'), lwd = 0.2,
+     main = 'Mozambique', cex.main = 0.4)
+par(fig = c(0.21, 0.5, 0.5, 1), new = T)  
+plot(moz1[moz1@data$NAME_1 == 'Maputo',], lwd = 0.2,
+     main = 'Maputo province', cex.main = 0.4)
+plot(zonas, add = TRUE, col = 'darkred', lwd =0.2)
+
+
+```
+
+
+# Map that shows the study area with all the geocoded deaths for 2012 
+
+(Similar to Fig. 2 in  Gonzalez et al. 2015)
+
+```{r}
+x <- member_expanded %>%
+         filter(year == 2012,
+                died_this_year)
+
+# Join to coordinates
+x$Family_id <- substr(x$perm_id, 1, 8)
+x <- left_join(x, coordenadas@data)
+
+
+par(fig = c(0,1, 0, 1))
+plot(zonas)
+# points(afepi_sp)
+points(x$lng,
+       x$lat,
+       col = adjustcolor('black', alpha.f = 0.3),
+       cex = 0.3)
+
+
+```
+
+
+
+# Map that shows the study area with all the geocoded AFEPI survey participants AND those who refused to participate for 2012 
+
+(Similar to Fig. 2 in  Gonzalez et al. 2015). Colour code: Red - did not participate; green - participated)
+
+I cannot do this, as I do not have data on non-participants
+
 ```
 
 # Packages used
