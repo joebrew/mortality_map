@@ -1,8 +1,7 @@
 ---
 title: "Mortality maps"
-subtitle: "AFEPI"
 author: "Joe Brew, Faustino Vilanculo, Charfudin Sacoor"
-date: "`r Sys.Date()`"
+date: '`r Sys.Date()`'
 output:
   tufte::tufte_html: default
   tufte::tufte_handout:
@@ -11,8 +10,9 @@ output:
   tufte::tufte_book:
     citation_package: natbib
     latex_engine: xelatex
-bibliography: skeleton.bib
 link-citations: yes
+subtitle: AFEPI
+bibliography: skeleton.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -46,7 +46,8 @@ knitr::opts_chunk$set(tidy = FALSE,
                       warning = FALSE, 
                       message = FALSE, 
                       error = TRUE, 
-                      cache = FALSE)
+                      cache = FALSE,
+                      fig.path = "plots/")
 options(htmltools.dir.version = FALSE)
 
 # Source data preparation
@@ -66,7 +67,9 @@ We combined AFEPI study data,^[emailed by Denise Naniche on February 6, 2017] wi
 
 ## Population
 
-The below table shows the population and number of deaths (18-50 year olds only) for each zone.
+### Both sexes
+
+The below table shows the population and number of deaths (30-50 year olds only) for each zone.
 
 ```{r}
 make_pretty(pop %>% mutate(year = as.character(year)) %>% 
@@ -75,9 +78,21 @@ make_pretty(pop %>% mutate(year = as.character(year)) %>%
                             pop))
 ```
 
+### By sex
+
+```{r}
+make_pretty(pop_sex %>%
+              mutate(year = as.character(year)) %>%
+              dplyr::select(zone_number,
+                            year,
+                            gender,
+                            pop))
+
+```
+
 ## Deaths and death rate
 
-The below table is identical to the above, but also shows a true death rate and age standardized death rate [@Gonzlez2015].
+The below shows a true death rate and age standardized death rate.
 
 ```{r}
 make_pretty(pop %>%
@@ -93,23 +108,28 @@ ggplot(data = pop,
            y = adjusted_death_rate,
            size = pop)) +
   geom_point(alpha = 0.3) +
-  theme_cism() +
+  theme_mortality() +
   xlab('Death rate') +
   ylab('Age-standardized death rate') +
   ggtitle('Death rate vs. age-standardized death rate',
           'One observation = one zone-year, 2010-2016')
+
+
 ```
 
-## Mortality of 18-50 year olds
+## Mortality of 30-50 year olds
 
 ### 2010
 
+#### Both sexes
+
 ```{r}
 x <- join_data(year = 2010,
-                 age_group = '18-50')
+                 age_group = '30-50')
 plot_joined_data(x) +
   labs(title = 'Mortality rate by zone',
-       subtitle = '2010, ages 18-50')
+       subtitle = '2010, ages 30-50')
+
 ```
 
 The below is an interactive (zoomable and clickable) version of the same map.
@@ -125,14 +145,114 @@ make_pretty(x)
 ```
 
 
+
+#### Males
+
+```{r}
+x <- join_data_sex(year = 2010,
+                 age_group = '30-50',
+                 sex = 'M')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2010, males, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+#### Females
+
+```{r}
+x <- join_data_sex(year = 2010,
+                 age_group = '30-50',
+                 sex = 'F')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2010, females, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+
+
 ### 2012
+
+#### Both sexes
 
 ```{r}
 x <- join_data(year = 2012,
-                 age_group = '18-50')
+                 age_group = '30-50')
 plot_joined_data(x) +
-    labs(title = 'Mortality rate by zone',
-       subtitle = '2012, ages 18-50')
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2012, ages 30-50')
+
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+
+
+#### Males
+
+```{r}
+x <- join_data_sex(year = 2012,
+                 age_group = '30-50',
+                 sex = 'M')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2012, males, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+#### Females
+
+```{r}
+x <- join_data_sex(year = 2012,
+                 age_group = '30-50',
+                 sex = 'F')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2012, females, ages 30-50')
 ```
 
 The below is an interactive (zoomable and clickable) version of the same map.
@@ -150,12 +270,15 @@ make_pretty(x)
 
 ### 2014
 
+#### Both sexes
+
 ```{r}
 x <- join_data(year = 2014,
-                 age_group = '18-50')
+                 age_group = '30-50')
 plot_joined_data(x) +
-    labs(title = 'Mortality rate by zone',
-       subtitle = '2014, ages 18-50')
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2014, ages 30-50')
+
 ```
 
 The below is an interactive (zoomable and clickable) version of the same map.
@@ -171,11 +294,62 @@ make_pretty(x)
 ```
 
 
-## HIV rate among 18-50 year olds
+
+#### Males
+
+```{r}
+x <- join_data_sex(year = 2014,
+                 age_group = '30-50',
+                 sex = 'M')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2014, males, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+#### Females
+
+```{r}
+x <- join_data_sex(year = 2014,
+                 age_group = '30-50',
+                 sex = 'F')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2014, females, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(x)
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+
+
+## HIV rate among 30-50 year olds
 
 In the below maps, HIV rate refers to the percentage of positives among all tested. It _only includes the AFEPI study_.
 
 ### 2010
+
+#### Both sexes
 
 ```{r}
 x <- join_data_hiv(year = 2010,
@@ -184,7 +358,8 @@ plot_joined_data(x,
                  fill_var = x@data$hiv_rate,
                  legend_title = 'HIV\nrate') +
   labs(title = 'HIV rate by zone',
-       subtitle = '2010, ages 18-50')
+       subtitle = '2010, both sexes, ages 30-50')
+
 ```
 
 The below is an interactive (zoomable and clickable) version of the same map.
@@ -205,7 +380,72 @@ The below is a table of the same data.
 make_pretty(x)
 ```
 
+#### Males
+
+```{r}
+x <- join_data_hiv(year = 2010,
+                 condition = 'Age >= 18 & Age <=50 & Sex == "Male"')
+plot_joined_data(x,
+                 fill_var = x@data$hiv_rate,
+                 legend_title = 'HIV\nrate') +
+  labs(title = 'HIV rate by zone',
+       subtitle = '2010, males, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(joined_object = x,
+                                     fill_var = x@data$hiv_rate,
+                                     popup_text1 = 'HIV rate',
+                                     popup_var1 = x@data$hiv_rate,
+                                     popup_text2 = 'Number of positives',
+                                     popup_var2 = x@data$positives,
+                         legend_title = 'HIV rate')
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+#### Females
+
+```{r}
+x <- join_data_hiv(year = 2010,
+                 condition = 'Age >= 18 & Age <=50 & Sex == "Female"')
+plot_joined_data(x,
+                 fill_var = x@data$hiv_rate,
+                 legend_title = 'HIV\nrate') +
+  labs(title = 'HIV rate by zone',
+       subtitle = '2010, females, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(joined_object = x,
+                                     fill_var = x@data$hiv_rate,
+                                     popup_text1 = 'HIV rate',
+                                     popup_var1 = x@data$hiv_rate,
+                                     popup_text2 = 'Number of positives',
+                                     popup_var2 = x@data$positives,
+                         legend_title = 'HIV rate')
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+
+
+
 ### 2012
+
+#### Both sexes
 
 ```{r}
 x <- join_data_hiv(year = 2012,
@@ -214,7 +454,8 @@ plot_joined_data(x,
                  fill_var = x@data$hiv_rate,
                  legend_title = 'HIV\nrate') +
   labs(title = 'HIV rate by zone',
-       subtitle = '2012, ages 18-50')
+       subtitle = '2012, both sexes, ages 30-50')
+
 ```
 
 The below is an interactive (zoomable and clickable) version of the same map.
@@ -235,17 +476,82 @@ The below is a table of the same data.
 make_pretty(x)
 ```
 
+#### Males
+
+```{r}
+x <- join_data_hiv(year = 2012,
+                 condition = 'Age >= 18 & Age <=50 & Sex == "Male"')
+plot_joined_data(x,
+                 fill_var = x@data$hiv_rate,
+                 legend_title = 'HIV\nrate') +
+  labs(title = 'HIV rate by zone',
+       subtitle = '2012, males, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(joined_object = x,
+                                     fill_var = x@data$hiv_rate,
+                                     popup_text1 = 'HIV rate',
+                                     popup_var1 = x@data$hiv_rate,
+                                     popup_text2 = 'Number of positives',
+                                     popup_var2 = x@data$positives,
+                         legend_title = 'HIV rate')
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+#### Females
+
+```{r}
+x <- join_data_hiv(year = 2012,
+                 condition = 'Age >= 18 & Age <=50 & Sex == "Female"')
+plot_joined_data(x,
+                 fill_var = x@data$hiv_rate,
+                 legend_title = 'HIV\nrate') +
+  labs(title = 'HIV rate by zone',
+       subtitle = '2012, females, ages 30-50')
+```
+
+The below is an interactive (zoomable and clickable) version of the same map.
+
+```{r}
+plot_joined_data_leaflet(joined_object = x,
+                                     fill_var = x@data$hiv_rate,
+                                     popup_text1 = 'HIV rate',
+                                     popup_var1 = x@data$hiv_rate,
+                                     popup_text2 = 'Number of positives',
+                                     popup_var2 = x@data$positives,
+                         legend_title = 'HIV rate')
+```
+
+The below is a table of the same data.
+
+```{r}
+make_pretty(x)
+```
+
+
+
+
+
 # Overlays
 
+## Both sexes
 
 The below map shows the 2012 mortality rate at the zone level, with an overlay of all AFEPI participants (for whom geographic data were available), colored by test result.
 
 ```{r}
 x <- join_data(year = 2012,
-                 age_group = '18-50')
+                 age_group = '30-50')
 plot_joined_data(x) +
   labs(title = 'Mortality rate by zone',
-       subtitle = '2010, ages 18-50') +
+       subtitle = '2012, ages 30-50') +
   geom_point(data = afepi %>%
                filter(Resulttest != 'Indeterminado'),
              aes(x = lng,
@@ -256,13 +562,15 @@ plot_joined_data(x) +
              size = 0.5) +
   scale_color_manual(name = '',
                      values = c('darkgreen', 'darkred'))
+
+
 ```
 
 The below map is identical, but interactive.
 
 ```{r}
 x <- join_data(year = 2012,
-                 age_group = '18-50')
+                 age_group = '30-50')
 z <- afepi %>%
                filter(Resulttest != 'Indeterminado') %>%
                  mutate(color = ifelse(Resulttest == 'Positivo', 'darkgreen', 'darkred'))
@@ -287,6 +595,126 @@ plot_joined_data_leaflet(x) %>%
                popup = popup)
 ```
 
+
+
+## Males
+
+The below map shows the 2012 mortality rate at the zone level, with an overlay of all male AFEPI participants (for whom geographic data were available), colored by test result.
+
+```{r}
+x <- join_data_sex(year = 2012,
+                 age_group = '30-50',
+                 sex = 'M')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2010, males, ages 30-50') +
+  geom_point(data = afepi %>%
+               filter(Resulttest != 'Indeterminado',
+                      Sex == 'Male'),
+             aes(x = lng,
+                 y = lat,
+                 group = NA,
+                 color = Resulttest),
+             alpha = 0.5,
+             size = 0.5) +
+  scale_color_manual(name = '',
+                     values = c('darkgreen', 'darkred'))
+
+
+```
+
+The below map is identical, but interactive.
+
+```{r}
+x <- join_data_sex(year = 2012,
+                 age_group = '30-50',
+                 sex = 'M')
+z <- afepi %>%
+               filter(Resulttest != 'Indeterminado',
+                      Sex == 'Male') %>%
+                 mutate(color = ifelse(Resulttest == 'Positivo', 'darkgreen', 'darkred'))
+popup <- paste0("<strong>Study ID: </strong>", 
+                  z$StudyID, 
+                  "<br><strong>",
+                  'Age',
+                  ": </strong>", 
+                  z$Age,
+                  "<br><strong>",
+                  'Test result',
+                  ": </strong>",
+                  z$Resulttest)
+plot_joined_data_leaflet(x) %>%
+  addCircleMarkers(data = z,
+               lng = ~lng,
+               lat = ~lat,
+               fillColor = ~color,
+               color = NA,
+               opacity = 0,
+               radius = 3,
+               popup = popup)
+```
+
+
+
+
+## Females
+
+The below map shows the 2012 mortality rate at the zone level, with an overlay of all female AFEPI participants (for whom geographic data were available), colored by test result.
+
+```{r}
+x <- join_data_sex(year = 2012,
+                 age_group = '30-50',
+                 sex = 'F')
+plot_joined_data(x) +
+  labs(title = 'Mortality rate by zone',
+       subtitle = '2010, females, ages 30-50') +
+  geom_point(data = afepi %>%
+               filter(Resulttest != 'Indeterminado',
+                      Sex == 'Female'),
+             aes(x = lng,
+                 y = lat,
+                 group = NA,
+                 color = Resulttest),
+             alpha = 0.5,
+             size = 0.5) +
+  scale_color_manual(name = '',
+                     values = c('darkgreen', 'darkred'))
+
+
+```
+
+The below map is identical, but interactive.
+
+```{r}
+x <- join_data_sex(year = 2012,
+                 age_group = '30-50',
+                 sex = 'F')
+z <- afepi %>%
+               filter(Resulttest != 'Indeterminado',
+                      Sex == 'Female') %>%
+                 mutate(color = ifelse(Resulttest == 'Positivo', 'darkgreen', 'darkred'))
+popup <- paste0("<strong>Study ID: </strong>", 
+                  z$StudyID, 
+                  "<br><strong>",
+                  'Age',
+                  ": </strong>", 
+                  z$Age,
+                  "<br><strong>",
+                  'Test result',
+                  ": </strong>",
+                  z$Resulttest)
+plot_joined_data_leaflet(x) %>%
+  addCircleMarkers(data = z,
+               lng = ~lng,
+               lat = ~lat,
+               fillColor = ~color,
+               color = NA,
+               opacity = 0,
+               radius = 3,
+               popup = popup)
+```
+
+
 ## Age distribution
 
 ### AFEPI participants
@@ -295,6 +723,25 @@ plot_joined_data_leaflet(x) %>%
 cism_plot(x = afepi$Age) +
   labs(x = 'Years',
        title = 'Age distribution of AFEPI partipants')
+
+
+```
+
+### AFEPI participants by sex
+
+```{r}
+ggplot(data = afepi,
+       aes(x = Age,
+           group = Sex,
+           fill = Sex,
+           color = Sex)) +
+  geom_density(alpha = 0.4) +
+  scale_fill_manual(name = 'Sex',
+                    values = c('darkorange', 'darkgreen')) +
+  theme_mortality() +
+  labs(x = 'Years',
+       title = 'Age distribution of AFEPI participants',
+       subtitle = 'By sex')
 ```
 
 ### AFEPI participants by outcome
@@ -308,10 +755,30 @@ ggplot(data = afepi %>%
   geom_density(alpha = 0.6) +
   scale_fill_manual(name = 'Test result',
                     values = c('darkorange', 'darkgreen')) +
-  theme_cism() +
+  theme_mortality() +
   labs(title = 'Age distribution of AFEPI participants',
        subtitle = 'By result status')
+
+
 ```
+
+### AFEPI participants by outcome and sex
+
+```{r}
+ggplot(data = afepi %>%
+         filter(Resulttest != 'Indeterminado'),
+       aes(x = Age,
+           group = Resulttest,
+           fill = Resulttest)) +
+  geom_density(alpha = 0.6) +
+  scale_fill_manual(name = 'Test result',
+                    values = c('darkorange', 'darkgreen')) +
+  theme_mortality() +
+  labs(title = 'Age distribution of AFEPI participants',
+       subtitle = 'By result status') +
+  facet_wrap(~Sex)
+```
+
 
 ### Residents of study area
 
@@ -329,7 +796,7 @@ ggplot(data = member_expanded %>%
        y = 'Density',
        title = 'Age distribution of Manhiça residents',
        subtitle = 'Per the census, filtering to only study aged population') +
-  theme_cism()
+  theme_mortality()
 ```
 
 ## Sex distribution
@@ -339,6 +806,8 @@ ggplot(data = member_expanded %>%
 ```{r}
 cism_plot(afepi$Sex) +
   labs(title = 'Sex distribution of AFEPI participants')
+
+
 ```
 
 ### Residents of study area
@@ -354,33 +823,39 @@ x <- member_expanded %>%
 x <- x[x %in% c('M', 'F')]
 cism_plot(x) +
   labs(title = 'Sex distribution of study area',
-       subtitle = 'Age group limited to 18-50, year 2014')
+       subtitle = 'Age group limited to 30-50, year 2014')
+
+
 ```
 
 # Follow-up work
 
-## Hotspot maps
+## Hotspot with zone data
 
-The below maps use the Kulldorf spatial scan statistic method. The red area are the zone / those zones which are estimated to be the most likely cluster.
+The below maps use the Kulldorf spatial scan statistic method, aggregated at the zone level. The red area are the zone / those zones which are estimated to be the most likely cluster.
 
 ### Death rate map, 2010
 
 ```{r}
 x <- join_data(year = 2010,
-               age_group = '18-50')
+               age_group = '30-50')
 hotspot(x,
   cases = x@data$n_deaths,
   population = x@data$pop)
+
+
 ```
 
 ### Death rate map, 2012
 
 ```{r}
 x <- join_data(year = 2012,
-               age_group = '18-50')
+               age_group = '30-50')
 hotspot(x,
   cases = x@data$n_deaths,
   population = x@data$pop)
+
+
 ```
 
 
@@ -392,7 +867,9 @@ x <- join_data_hiv(year = 2010,
 hotspot(x,
   cases = x@data$positives,
   population = x@data$denom)
-title('Most likely cluster (year: 2010, age group: 18-50)')
+title('Most likely cluster (year: 2010, age group: 30-50)')
+
+
 ```
 
 ### HIV map 2012
@@ -403,12 +880,189 @@ x <- join_data_hiv(year = 2012,
 hotspot(x,
   cases = x@data$positives,
   population = x@data$denom)
-title('Most likely cluster (year: 2012, age group: 18-50)')
+title('Most likely cluster (year: 2012, age group: 30-50)')
+
 ```
+
+## Hotspots with point data
+
+As am alternative to the Kulldorff spatial cluster detection method (the statistical framework behind SatScan), we can instead ignore administrative zones and use only point data. For this, we'll construct a smoothed surface^[raster] with a weighted HIV prevalence scores, as well as radial prevalences.
+
+
+```{r}
+# Make an hiv score for afepi
+afepi_sp@data$hiv <- ifelse(afepi_sp@data$Resulttest == 'Positivo', 1, 0)
+
+# Create a gridded dataframe with values 
+# for the entire range (bbox) of afepi_sp
+df_grid <- expand.grid(lng = seq(bbox(afepi_sp)[1,1],
+                                 bbox(afepi_sp)[1,2],
+                                 by = 0.001),
+                       lat = seq(bbox(afepi_sp)[2,1],
+                                 bbox(afepi_sp)[2,2],
+                                 by = 0.001),
+                       hiv = NA,
+                       hiv_score = NA,
+                       within_10 = NA,
+                       within_05 = NA,
+                       within_01 = NA,
+                       color = NA)
+df_grid$latitude <- df_grid$lat
+df_grid$longitude <- df_grid$lng
+coordinates(df_grid) <- ~longitude+latitude
+
+# Define a weighter
+weighter <- 0.2
+
+# Define a dataframe for plotting weight
+weighter_df <- data.frame(x = 1:100,
+                          y = (1 / 1:100) ^weighter)
+
+```
+
+
+For the below visualizations, we created a estimated "HIV prevalence score", which is the nearby HIV prevalence weighted by distance to the point in question. Our weight structure looks like this.
+
+```{r}
+ggplot(data = weighter_df,
+       aes(x = x, y = y)) +
+  geom_area(alpha = 0.3) +
+  labs(x = 'Kilometers',
+       y = 'Weight',
+       title = 'Weight structure',
+       subtitle = 'Kind of arbitrary, completely made up by Joe') +
+  theme_mortality()
+```
+
+Using this method produces the below map, which can be understood as an indication of likely "hot" and "cold" areas for HIV
+
+```{r}
+# Go through each row of df_grid, getting the 
+# weighted mean hiv score for that point
+# and putting a color into df_grid
+if('df_grid.RData' %in% dir()){
+  load('df_grid.RData')
+} else {
+  the_rows <- nrow(df_grid)
+  for (i in 1:nrow(df_grid)){
+    message(paste0(i, ' of ', the_rows))
+  # Get distance from every point in afepi
+  distances <- spDistsN1(pts = afepi_sp,
+                        pt = df_grid[i,],
+                        longlat = TRUE)
+  # Define which are acceptably close
+  close_enough <- which(distances <= 100)
+  # Get an hiv score
+  hiv <- stats::weighted.mean(x = afepi_sp$hiv[close_enough],
+                       w = (1 / distances[close_enough]) ^weighter,
+                       na.rm = TRUE)
+  # Assign hiv to the dataframe
+  df_grid$hiv[i] <- hiv
+  # Get the hiv score on a 0-1000 scale
+  # and add 1 so that it's on a 1-1001 scale (for coloring)
+  hiv_score <- round(hiv * 1000) + 1
+  df_grid$hiv_score[i] <- hiv_score
+  
+  # Get likely number of hiv positives within 10 km
+  within_10 <- (mean(afepi_sp$hiv[distances <= 10], na.rm = TRUE)/100) *
+    length(which(distances <= 10))
+  df_grid$within_10[i] <- ifelse(is.na(within_10),
+                                 0,
+                                 within_10)
+  
+    # Get likely number of hiv positives within 5 km
+  within_05 <- (mean(afepi_sp$hiv[distances <= 05], na.rm = TRUE)/100) *
+    length(which(distances <= 05))
+  df_grid$within_05[i] <- ifelse(is.na(within_05),
+                                 0,
+                                 within_05)
+  
+      # Get likely number of hiv positives within 1 km
+  within_01 <- (mean(afepi_sp$hiv[distances <= 01], na.rm = TRUE)/100) *
+    length(which(distances <= 01))
+  df_grid$within_01[i] <- ifelse(is.na(within_01),
+                                 0,
+                                 within_01)
+    
+}
+save('df_grid', file = 'df_grid.RData')
+
+}
+
+# Fix up the hiv score
+df_grid$hiv_score <-
+  df_grid$hiv_score -
+  min(df_grid$hiv_score, na.rm = TRUE)
+
+# Create a n length color vector
+color_vector <-
+  colorRampPalette(c('red', 'yellow', 'green'))(max(df_grid$hiv_score, na.rm = TRUE) +1)
+
+# If there are no nearby obs, just make white
+# otherwise, give it a color from the palette
+df_grid$color <- 
+  ifelse(is.na(df_grid$hiv_score),
+         'white',
+         color_vector[df_grid$hiv_score])
+
+library(raster)
+library(rasterVis)
+# Convert df_grid to raster
+temp <- df_grid@data %>% arrange(lng, lat)
+r <- rasterFromXYZ(temp[, c('lng', 'lat', 'hiv')])
+# Make only for district
+proj4string(afepi_sp) <- proj4string(man)
+proj4string(df_grid) <- proj4string(afepi_sp)
+# Get border of afepi_sp
+the_border <- rgeos::gConvexHull(afepi_sp)
+x <- over(df_grid, polygons(the_border))
+df_grid_small <- df_grid[!is.na(x),]
+temp <- df_grid_small@data %>% arrange(lng, lat)
+r <- rasterFromXYZ(temp[, c('lng', 'lat', 'hiv')], crs = proj4string(man))
+plot(r)
+
+contour(r, add = TRUE,
+        col = adjustcolor('black', alpha.f = 0.3))
+plot(man, add = TRUE,
+     fill = NA,
+     color = adjustcolor('grey', alpha.f = 0.2))
+title(main = 'Estimated HIV prevalence')
+```
+
+Here is a "zoom-out" of the same map
+
+```{r}
+plot(man)
+plot(r, add = TRUE)
+
+contour(r, add = TRUE,
+        col = adjustcolor('black', alpha.f = 0.3))
+plot(man, add = TRUE,
+     fill = NA,
+     color = adjustcolor('grey', alpha.f = 0.2))
+title(main = 'Estimated HIV prevalence')
+```
+
+
+```{r, eval = FALSE}
+ggplot(man3_fortified,
+       aes(x = long, y = lat)) +
+  geom_polygon(aes(group = id), fill = 'black') +
+  geom_raster(data = temp,
+              aes(x = lng, y = lat, fill = hiv)) +
+    geom_polygon(aes(group = id), fill = NA, color = 'black', alpha = 0.5) +
+    xlab('Longitude') +
+  ylab('Latitude') +
+  ggtitle('Estimated HIV prevalence') +
+  theme(panel.background = element_rect(fill = 'white', 
+                                        colour = 'white'),
+        panel.grid.major = element_line(colour = "white")) 
+```
+
 
 ## HIV participation map 
 
-I am not yet able to produce a map including location of people who did not want to participate in the study, as I do not have those data.
+I am not able to produce a map including location of people who did not want to participate in the study, as I do not have those data.
 
 # Map that shows study area with zone number labels
 
@@ -425,19 +1079,18 @@ text(as.matrix(coordinates(zonas)),
      labels = zonas@data$zone_number,
      col = adjustcolor('black', alpha.f = 0.5),
      cex = 0.5)
-par(fig = c(0.01,0.4, 0.5, 1), new = T)  
+par(fig = c(0.01,0.35, 0.5, 1), new = T)  
 plot(moz1, col = ifelse(moz1@data$NAME_1 == 'Maputo', 'red', 'white'), lwd = 0.2,
      main = 'Mozambique', cex.main = 0.4)
-par(fig = c(0.21, 0.5, 0.5, 1), new = T)  
+par(fig = c(0.18, 0.45, 0.5, 1), new = T)  
 plot(moz1[moz1@data$NAME_1 == 'Maputo',], lwd = 0.2,
      main = 'Maputo province', cex.main = 0.4)
 plot(zonas, add = TRUE, col = 'darkred', lwd =0.2)
 
-
 ```
 
 
-# Map that shows the study area with all the geocoded deaths for 2012 
+## Map that shows the study area with all the geocoded deaths for 2012 
 
 (Similar to Fig. 2 in  Gonzalez et al. 2015)
 
@@ -463,14 +1116,6 @@ points(x$lng,
 ```
 
 
-
-# Map that shows the study area with all the geocoded AFEPI survey participants AND those who refused to participate for 2012 
-
-(Similar to Fig. 2 in  Gonzalez et al. 2015). Colour code: Red - did not participate; green - participated)
-
-I cannot do this, as I do not have data on non-participants
-
-```
 
 # Packages used
 
