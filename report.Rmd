@@ -906,10 +906,13 @@ df_grid <- expand.grid(lng = seq(bbox(afepi_sp)[1,1],
                        within_10 = NA,
                        within_05 = NA,
                        within_01 = NA,
-                       color = NA)
+                       color = NA,
+                       x = NA,
+                       x_score = NA)
 df_grid$latitude <- df_grid$lat
 df_grid$longitude <- df_grid$lng
 coordinates(df_grid) <- ~longitude+latitude
+df_grid_mortality <- df_grid
 
 # Define a weighter
 weighter <- 0.2
@@ -1019,10 +1022,10 @@ x <- over(df_grid, polygons(the_border))
 df_grid_small <- df_grid[!is.na(x),]
 temp <- df_grid_small@data %>% arrange(lng, lat)
 r <- rasterFromXYZ(temp[, c('lng', 'lat', 'hiv')], crs = proj4string(man))
-plot(r)
+plot(r, col = colorRampPalette(rev(brewer.pal(n = 9, 'Spectral')))(1000))
 
-contour(r, add = TRUE,
-        col = adjustcolor('black', alpha.f = 0.3))
+# contour(r, add = TRUE,
+#         col = adjustcolor('black', alpha.f = 0.3))
 plot(man, add = TRUE,
      fill = NA,
      color = adjustcolor('grey', alpha.f = 0.2))
@@ -1033,7 +1036,10 @@ Here is a "zoom-out" of the same map
 
 ```{r}
 plot(man)
-plot(r, add = TRUE)
+plot(r, 
+     col = colorRampPalette(rev(brewer.pal(n = 9, 'Spectral')))(1000),
+     add = TRUE)
+
 
 contour(r, add = TRUE,
         col = adjustcolor('black', alpha.f = 0.3))
@@ -1043,6 +1049,136 @@ plot(man, add = TRUE,
 title(main = 'Estimated HIV prevalence')
 ```
 
+We can do the same for mortality (2010-2012), only in our study period (2010-2012).
+
+```{r}
+
+# Get mortality from 2010-2012
+mort <- member_expanded %>%
+  filter(year <= 2012,
+         year >= 2010,
+         age >= 30,
+         age <= 50) %>%
+  mutate(died = ifelse(is.na(died_this_year), 0,
+                             ifelse(died_this_year, 1, 0))) %>%
+  mutate(Family_id = substr(perm_id, 1, 8)) %>%
+  left_join(coordenadas@data) %>%
+  filter(!is.na(lng),
+         !is.na(lat))
+mort_sp <- mort
+coordinates(mort_sp) <- ~lng + lat
+
+# Go through each row of df_grid, getting the 
+# weighted mean hiv score for that point
+# and putting a color into df_grid
+if('df_grid_mortality.RData' %in% dir()){
+  load('df_grid_mortality.RData')
+} else {
+  the_rows <- nrow(df_grid_mortality)
+  for (i in 1:nrow(df_grid_mortality)){
+    message(paste0(i, ' of ', the_rows))
+  # Get distance from every point in afepi
+  distances <- spDistsN1(pts = mort_sp,
+                        pt = df_grid_mortality[i,],
+                        longlat = TRUE)
+  # Define which are acceptably close
+  close_enough <- which(distances <= 100)
+  # Get an hiv score
+  x <- stats::weighted.mean(x = mort_sp$died[close_enough],
+                       w = (1 / distances[close_enough]) ^weighter,
+                       na.rm = TRUE)
+  # Assign hiv to the dataframe
+  df_grid_mortality$x[i] <- x
+  # Get the hiv score on a 0-1000 scale
+  # and add 1 so that it's on a 1-1001 scale (for coloring)
+  x_score <- round(x * 1000) + 1
+  df_grid_mortality$x_score[i] <- x_score
+  
+  # Get likely number of x positives within 10 km
+  within_10 <- (mean(mort_sp$x[distances <= 10], na.rm = TRUE)/100) *
+    length(which(distances <= 10))
+  df_grid_mortality$within_10[i] <- ifelse(is.na(within_10),
+                                 0,
+                                 within_10)
+  
+    # Get likely number of x positives within 5 km
+  within_05 <- (mean(mort_sp$x[distances <= 05], na.rm = TRUE)/100) *
+    length(which(distances <= 05))
+  df_grid_mortality$within_05[i] <- ifelse(is.na(within_05),
+                                 0,
+                                 within_05)
+  
+      # Get likely number of x positives within 1 km
+  within_01 <- (mean(mort_sp$x[distances <= 01], na.rm = TRUE)/100) *
+    length(which(distances <= 01))
+  df_grid_mortality$within_01[i] <- ifelse(is.na(within_01),
+                                 0,
+                                 within_01)
+    
+}
+save('df_grid_mortality', file = 'df_grid_mortality.RData')
+
+}
+
+# Fix up the x score
+df_grid_mortality$x_score <-
+  df_grid_mortality$x_score -
+  min(df_grid_mortality$x_score, na.rm = TRUE)
+
+# Create a n length color vector
+color_vector <-
+  colorRampPalette(c('red', 'yellow', 'green'))(max(df_grid_mortality$x_score, na.rm = TRUE) +1)
+
+# If there are no nearby obs, just make white
+# otherwise, give it a color from the palette
+df_grid_mortality$color <- 
+  ifelse(is.na(df_grid_mortality$x_score),
+         'white',
+         color_vector[df_grid_mortality$x_score])
+
+library(raster)
+library(rasterVis)
+# Convert df_grid_mortality to raster
+temp <- df_grid_mortality@data %>% arrange(lng, lat)
+r_mortality <- rasterFromXYZ(temp[, c('lng', 'lat', 'x')])
+# Make only for district
+proj4string(afepi_sp) <- proj4string(man)
+proj4string(df_grid_mortality) <- proj4string(afepi_sp)
+# Get border of afepi_sp
+the_border <- rgeos::gConvexHull(afepi_sp)
+x <- over(df_grid_mortality, polygons(the_border))
+df_grid_mortality_small <- df_grid_mortality[!is.na(x),]
+temp <- df_grid_mortality_small@data %>% arrange(lng, lat)
+r_mortality <- rasterFromXYZ(temp[, c('lng', 'lat', 'x')], crs = proj4string(man))
+plot(r_mortality, col = colorRampPalette(rev(brewer.pal(n = 9, 'Spectral')))(1000))
+# contour(r_mortality, add = TRUE,
+#         col = adjustcolor('black', alpha.f = 0.3))
+plot(man, add = TRUE,
+     fill = NA,
+     color = adjustcolor('grey', alpha.f = 0.2))
+title(main = 'Estimated mortality')
+
+```
+
+
+## Side-by-side map
+
+```{r}
+# pdf('side_by_side.pdf', height = 8, width =11)
+par(mfrow = c(1,2))
+plot(r, col = colorRampPalette(rev(brewer.pal(n = 9, 'Spectral')))(1000))
+plot(man, add = TRUE,
+     fill = NA,
+     color = adjustcolor('grey', alpha.f = 0.2))
+title('Estimated HIV prevalence')
+plot(r_mortality, col = colorRampPalette(rev(brewer.pal(n = 9, 'Spectral')))(1000))
+plot(man, add = TRUE,
+     fill = NA,
+     color = adjustcolor('grey', alpha.f = 0.2))
+title('Estimated mortality (30-50 y.o.)')
+par(mfrow = c(1,1))
+# dev.off()
+```
 
 ```{r, eval = FALSE}
 ggplot(man3_fortified,
