@@ -1059,8 +1059,7 @@ mort <- member_expanded %>%
          year >= 2010,
          age >= 30,
          age <= 50) %>%
-  mutate(died = ifelse(is.na(died_this_year), 0,
-                             ifelse(died_this_year, 1, 0))) %>%
+  mutate(died = ifelse(died_this_year, 1, 0)) %>%
   mutate(Family_id = substr(perm_id, 1, 8)) %>%
   left_join(coordenadas@data) %>%
   filter(!is.na(lng),
@@ -1196,6 +1195,228 @@ ggplot(man3_fortified,
 ```
 
 
+## Kriging map
+
+### HIV
+
+```{r}
+# Krieging - HIV
+sp_df <- afepi_sp
+sp_points <- SpatialPoints(sp_df)
+
+# Create a fine grid
+pixels_per_side = 200
+bottom.left = apply(sp_points@coords,2,min)
+top.right = apply(sp_points@coords,2,max)
+margin = abs((top.right-bottom.left))/10
+bottom.left = bottom.left-margin
+top.right = top.right+margin
+pixel.size = abs(top.right-bottom.left)/pixels_per_side
+g = GridTopology(cellcentre.offset=bottom.left,
+             cellsize=pixel.size,
+             cells.dim=c(pixels_per_side,pixels_per_side))
+
+
+# make projected before krieging
+new_pro <- CRS("+init=epsg:3036")
+# proj4string(fit_points) <-
+#   proj4string(the_border) <- 
+#   proj4string(sp_df) <- new_pro
+
+
+the_border <- rgeos::gConvexHull(afepi_sp)
+
+grid_points = SpatialPoints(g)
+proj4string(grid_points) <- proj4string(the_border)
+in_points = !is.na(over(grid_points,polygons(the_border)))
+fit_points = SpatialPoints(as.data.frame(grid_points)[in_points,])
+proj4string(fit_points) <- proj4string(the_border)
+
+fit_points <- spTransform(fit_points, new_pro)
+the_border <- spTransform(the_border, new_pro)
+sp_df <- spTransform(sp_df, new_pro)
+
+
+# Do kriging
+library(automap)
+if('krig_hiv.RData' %in% dir()){
+  load('krig_hiv.RData')
+} else {
+  krig <- autoKrige(hiv~1, sp_df, new_data=fit_points)
+  save(krig, file = 'krig_hiv.RData')
+}
+interp_data = as.data.frame(krig$krige_output)
+colnames(interp_data) = c("longitude","latitude","APPT_pred","APPT_var","APPT_stdev")
+
+# Convert bag to lat long
+interp_data_sp <- interp_data
+coordinates(interp_data_sp) <- ~longitude+latitude
+proj4string(interp_data_sp) <- new_pro
+interp_data_sp <- spTransform(interp_data_sp, proj4string(man))
+interp_data$longitude <- interp_data$latitude <- NULL
+interp_data$longitude <- coordinates(interp_data_sp)[,1]
+interp_data$latitude <- coordinates(interp_data_sp)[,2]
+
+# Set up map plot
+map_base_aesthetics = aes(x=longitude, y=latitude, group=group)
+map_base = geom_polygon(data=the_border, map_base_aesthetics)
+borders = geom_polygon(data=the_border, map_base_aesthetics, color="black", fill=NA)
+
+nbin=20
+
+ggplot(data=interp_data %>%
+         filter(APPT_pred <= quantile(APPT_pred, 0.98),
+                APPT_pred >= quantile(APPT_pred, 0.02)), 
+       aes(x=longitude, y=latitude)) + 
+    geom_polygon(data = man3_fortified, aes(x = long,
+           y = lat,
+           # z = p_positive,
+           group = group),
+           fill = 'white',
+           color = 'black') +
+  geom_point(aes(color = APPT_pred),
+             alpha = 0.5,
+             size = 0.1) +
+
+  # coord_map() +
+  # geom_tile(aes(fill=APPT_pred)) +
+  # stat_contour(aes(z=APPT_pred), bins=nbin, color="#999999") +
+  scale_color_gradient2(name = 'Interpolated\npositivity',
+                       low="white",mid="orange",high="red") +
+  # borders +
+  theme_cism() +
+  labs(title = 'Interpolated HIV positivity rate',
+       subtitle = 'Krieging method',
+       x = 'Longitude',
+       y = 'Latitude')
+
+```
+
+### Mortality
+
+```{r}
+# Krieging - mortality
+sp_df <- member_expanded %>%
+  filter(year >= 2010,
+         year <= 2012,
+         age >= 30,
+         age <= 50) %>%
+  sample_n(5000)
+  
+sp_df$x <- as.numeric(sp_df$gps_longitude)
+sp_df$y <- as.numeric(sp_df$gps_latitude)
+sp_df <- sp_df %>%
+  filter(!is.na(x),
+         !is.na(y))
+coordinates(sp_df) <- ~x+y
+proj4string(sp_df) <- proj4string(man)
+sp_points <- SpatialPoints(sp_df)
+
+# Create a fine grid
+pixels_per_side = 200
+bottom.left = apply(sp_points@coords,2,min)
+top.right = apply(sp_points@coords,2,max)
+margin = abs((top.right-bottom.left))/10
+bottom.left = bottom.left-margin
+top.right = top.right+margin
+pixel.size = abs(top.right-bottom.left)/pixels_per_side
+g = GridTopology(cellcentre.offset=bottom.left,
+             cellsize=pixel.size,
+             cells.dim=c(pixels_per_side,pixels_per_side))
+
+
+# make projected before krieging
+new_pro <- CRS("+init=epsg:3036")
+# proj4string(fit_points) <-
+#   proj4string(the_border) <- 
+#   proj4string(sp_df) <- new_pro
+
+
+the_border <- rgeos::gConvexHull(afepi_sp)
+
+grid_points = SpatialPoints(g)
+proj4string(grid_points) <- proj4string(the_border)
+in_points = !is.na(over(grid_points,polygons(the_border)))
+fit_points = SpatialPoints(as.data.frame(grid_points)[in_points,])
+proj4string(fit_points) <- proj4string(the_border)
+
+fit_points <- spTransform(fit_points, new_pro)
+the_border <- spTransform(the_border, new_pro)
+sp_df <- spTransform(sp_df, new_pro)
+
+
+# Do kriging
+library(automap)
+sp_df$died <- ifelse(is.na(sp_df$died_this_year),
+                     0,
+                     ifelse(sp_df$died_this_year,
+                            1, 0))
+if('krig_mortality.RData' %in% dir()){
+  load('krig_mortality.RData')
+} else {
+  krig <- autoKrige(died~1, sp_df, new_data=fit_points)
+  save(krig, file = 'krig_mortality.RData')
+}
+
+interp_data = as.data.frame(krig$krige_output)
+colnames(interp_data) = c("longitude","latitude","APPT_pred","APPT_var","APPT_stdev")
+
+# Convert bag to lat long
+interp_data_sp <- interp_data
+coordinates(interp_data_sp) <- ~longitude+latitude
+proj4string(interp_data_sp) <- new_pro
+interp_data_sp <- spTransform(interp_data_sp, proj4string(man))
+interp_data$longitude <- interp_data$latitude <- NULL
+interp_data$longitude <- coordinates(interp_data_sp)[,1]
+interp_data$latitude <- coordinates(interp_data_sp)[,2]
+
+# Set up map plot
+map_base_aesthetics = aes(x=longitude, y=latitude, group=group)
+map_base = geom_polygon(data=the_border, map_base_aesthetics)
+borders = geom_polygon(data=the_border, map_base_aesthetics, color="black", fill=NA)
+
+nbin=20
+
+ggplot(data=interp_data %>%
+         filter(APPT_pred <= quantile(APPT_pred, 0.98),
+                APPT_pred >= quantile(APPT_pred, 0.02)), 
+       aes(x=longitude, y=latitude)) + 
+    geom_polygon(data = man3_fortified, aes(x = long,
+           y = lat,
+           # z = p_positive,
+           group = group),
+           fill = 'white',
+           color = 'black') +
+  geom_point(aes(color = APPT_pred),
+             alpha = 0.5,
+             size = 0.1) +
+
+  # coord_map() +
+  # geom_tile(aes(fill=APPT_pred)) +
+  # stat_contour(aes(z=APPT_pred), bins=nbin, color="#999999") +
+  scale_color_gradient2(name = 'Interpolated\nmortality',
+                       low="white",mid="orange",high="red") +
+  # borders +
+  theme_cism() +
+  labs(title = 'Interpolated adult mortality rate',
+       subtitle = 'Krieging method',
+       x = 'Longitude',
+       y = 'Latitude')
+```
+
+```{r}
+# Write some files
+# r = hiv
+# r_mortality = mortality
+writeRaster(x = r,
+            filename = 'rasters/hiv.tif',
+            overwrite = TRUE)
+writeRaster(x = r_mortality,
+            filename = 'rasters/mortality.tif',
+            overwrite = TRUE)
+
+```
+
 ## HIV participation map 
 
 I am not able to produce a map including location of people who did not want to participate in the study, as I do not have those data.
@@ -1204,7 +1425,7 @@ I am not able to produce a map including location of people who did not want to 
 
 (and an inset map showing Mozambique and Maputo province)
 
-```{r, fig.height = 8, fig.width = 8}
+```{r, fig.height = 8, fig.width = 8, eval = FALSE}
 library(cism)
 
 par(fig = c(0,1,0,1))

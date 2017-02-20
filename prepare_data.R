@@ -192,6 +192,9 @@ if('all_data.RData' %in% dir('data')){
   # Get a boolean died this year or not
   member_expanded$died_this_year <-
     member_expanded$death_year == member_expanded$year
+  member_expanded$died_this_year <-
+    ifelse(is.na(member_expanded$died_this_year),
+           FALSE, member_expanded$died_this_year)
   
   # Get age
   member_expanded <-
