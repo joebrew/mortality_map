@@ -1473,6 +1473,51 @@ points(x$lng,
 ```
 
 
+```{r}
+# Write jittered data for peter
+peter_mortality <-
+  member_expanded %>%
+         filter(year %in% 2010:2012,
+                age >= 18,
+                age <= 50) %>%
+  mutate(lng = as.numeric(as.character(gps_longitude)),
+         lat = as.numeric(as.character(gps_latitude))) %>%
+  mutate(id = as.numeric(factor(perm_id))) %>%
+  rename(died = died_this_year) %>%
+  dplyr::select(id,
+                year,
+                lng,
+                lat, 
+                died) %>%
+  mutate(died = as.numeric(died)) %>%
+  filter(!is.na(lng),
+         !is.na(lat)) %>%
+  arrange(id, year) %>%
+    mutate(lng = round(lng, digits = 3),
+         lat = round(lat, digits = 3))
+
+# hiv
+peter_hiv <-
+  afepi %>%
+  mutate(study_id = as.numeric(factor(StudyID)),
+         hiv = ifelse(Resulttest == 'Positivo', 1,
+                      ifelse(Resulttest == 'Negativo', 0, 0)),
+         year = test_year) %>%
+  dplyr::select(study_id,
+                year, 
+                lng,
+                lat,
+                hiv) %>%
+  mutate(lng = round(lng, digits = 3),
+         lat = round(lat, digits = 3)) %>%
+  filter(!is.na(lng), 
+         !is.na(lat))
+
+# Write csvs
+write.csv(peter_hiv, 'anonymized_data_for_peter/hiv.csv')
+write.csv(peter_mortality, 'anonymized_data_for_peter/mortality.csv')
+```
+
 
 # Packages used
 
