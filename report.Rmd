@@ -1481,10 +1481,12 @@ peter_mortality <-
                 age >= 18,
                 age <= 50) %>%
   mutate(lng = as.numeric(as.character(gps_longitude)),
-         lat = as.numeric(as.character(gps_latitude))) %>%
+         lat = as.numeric(as.character(gps_latitude)),
+         sex = gender) %>%
   mutate(id = as.numeric(factor(perm_id))) %>%
   rename(died = died_this_year) %>%
   dplyr::select(id,
+                sex,
                 year,
                 lng,
                 lat, 
@@ -1499,11 +1501,16 @@ peter_mortality <-
 # hiv
 peter_hiv <-
   afepi %>%
+  filter(Age >= 30,
+         Age <= 50) %>%
   mutate(study_id = as.numeric(factor(StudyID)),
          hiv = ifelse(Resulttest == 'Positivo', 1,
                       ifelse(Resulttest == 'Negativo', 0, 0)),
-         year = test_year) %>%
+         year = test_year,
+         sex = ifelse(Sex == 'Female', 'F',
+                      ifelse(Sex == 'Male', 'M', NA))) %>%
   dplyr::select(study_id,
+                sex,
                 year, 
                 lng,
                 lat,
@@ -1516,6 +1523,13 @@ peter_hiv <-
 # Write csvs
 write.csv(peter_hiv, 'anonymized_data_for_peter/hiv.csv')
 write.csv(peter_mortality, 'anonymized_data_for_peter/mortality.csv')
+
+# Write proj for peter
+# writeOGR(zonas, 
+#          dsn = 'spatial_public', 
+#          layer ='zonas_with_prj', 
+#          driver = 'ESRI Shapefile')
+
 ```
 
 
